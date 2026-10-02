@@ -89,7 +89,9 @@ body {
 	text-align: center;
 	z-index: 1;
 }
-		</style>
+		#status-text {position:absolute;bottom:17%;left:5%;width:90%;text-align:center;font:16px system-ui;line-height:1.5;z-index:2;color:#fff;text-shadow:0 1px 4px #000;background:#10242ce6;padding:12px;box-sizing:border-box;border-radius:8px}
+#status-retry {display:none;position:absolute;bottom:3%;left:50%;transform:translateX(-50%);z-index:3;padding:10px 20px;border:1px solid #bce9d9;border-radius:8px;background:#10242c;color:white;font:16px system-ui}
+</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
 <meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover'><style>html,body,canvas{touch-action:none;overscroll-behavior:none;}</style>
@@ -106,7 +108,7 @@ body {
 		<div id="status">
 			<img id="status-splash" class="show-image--true fullsize--true use-filter--true" src="index.png" alt="">
 			<progress id="status-progress"></progress>
-			<div id="status-notice"></div>
+			<div id="status-notice"></div><div id="status-text" role="status" aria-live="polite">Downloading game…<br>The first load may take a minute. Keep this page open.</div><button id="status-retry" type="button">Retry loading</button>
 		</div>
 
 		<script src="index.js"></script>
@@ -119,6 +121,10 @@ const engine = new Engine(GODOT_CONFIG);
 	const statusOverlay = document.getElementById('status');
 	const statusProgress = document.getElementById('status-progress');
 	const statusNotice = document.getElementById('status-notice');
+ const statusText = document.getElementById('status-text');
+ const retryButton = document.getElementById('status-retry');
+ retryButton.addEventListener('click', () => window.location.reload());
+ const slowTimer = setTimeout(() => { if (initializing) retryButton.style.display = 'block'; }, 45000);
 
 	let initializing = true;
 	let statusMode = '';
@@ -128,6 +134,7 @@ const engine = new Engine(GODOT_CONFIG);
 			return;
 		}
 		if (mode === 'hidden') {
+			clearTimeout(slowTimer);
 			statusOverlay.remove();
 			initializing = false;
 			return;
@@ -150,7 +157,10 @@ const engine = new Engine(GODOT_CONFIG);
 	}
 
 	function displayFailureNotice(err) {
-		console.error(err);
+		clearTimeout(slowTimer);
+ statusText.textContent = 'Loading failed. Check your connection, then retry.';
+ retryButton.style.display = 'block';
+ console.error(err);
 		if (err instanceof Error) {
 			setStatusNotice(err.message);
 		} else if (typeof err === 'string') {
@@ -204,6 +214,8 @@ const engine = new Engine(GODOT_CONFIG);
 				if (current > 0 && total > 0) {
 					statusProgress.value = current;
 					statusProgress.max = total;
+ const percent = Math.min(100, Math.floor(current / total * 100));
+ statusText.textContent = percent < 100 ? 'Downloading game: ' + percent + '% — keep this page open.' : 'Download complete. Starting game…';
 				} else {
 					statusProgress.removeAttribute('value');
 					statusProgress.removeAttribute('max');
